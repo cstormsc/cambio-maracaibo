@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cambio Maracaibo</title>
+<meta name="theme-color" content="#0b7a5c" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1513" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cambio">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column "ticket" — converter on top, rate board below, editable by owner */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --ink:#14201c; --muted:#5d6b66; --line:#d8dfdc;
+  --accent:#0b7a5c; --accent-ink:#ffffff; --warn:#b35c00; --chip:#e4efe9;
+  --display:"Archivo",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1513; --surface:#17201d; --ink:#e6eeea; --muted:#94a39d; --line:#2a3632;
+  --accent:#3fc79a; --accent-ink:#06120e; --warn:#f0a050; --chip:#1f2f29; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1513; --surface:#17201d; --ink:#e6eeea; --muted:#94a39d; --line:#2a3632;
+  --accent:#3fc79a; --accent-ink:#06120e; --warn:#f0a050; --chip:#1f2f29; color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--display);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:calc(28px + env(safe-area-inset-top,0px)) calc(48px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header h1{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;margin:0;text-wrap:balance}
+header p{margin:4px 0 0;color:var(--muted)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+input,select,button{font:inherit;color:inherit}
+input[type=number],select,input[type=date],input[type=text]{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#amount{flex:1 1 180px;font-family:var(--mono);font-size:1.6rem;font-weight:600}
+#from{flex:0 0 auto;font-weight:600}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.seg button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 12px;cursor:pointer;font-size:.85rem}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.results{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:18px}
+.res{border-top:1px solid var(--line);padding-top:10px;min-width:0}
+.res .v{font-family:var(--mono);font-size:1.3rem;font-weight:600;overflow-wrap:anywhere}
+.res .s{font-size:.8rem;color:var(--muted)}
+.tip{margin-top:16px;padding:12px 14px;background:var(--chip);border-radius:10px;font-size:.9rem}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+td.r,th.r{text-align:right}
+.stale{display:inline-block;font-size:.7rem;padding:1px 7px;border-radius:999px;background:transparent;border:1px solid var(--warn);color:var(--warn);margin-left:6px;white-space:nowrap}
+.tbl{overflow-x:auto}
+.foot{font-size:.82rem;color:var(--muted)}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:600}
+.btn.ghost{background:transparent;color:var(--accent)}
+.edit-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+.edit-grid .er{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+@media (max-width:520px){.edit-grid .er{grid-template-columns:1fr 1fr}.edit-grid .er span{grid-column:1/-1}}
+#status{font-size:.85rem;color:var(--muted)}
+a{color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){.res .v{transition:color .2s}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Cambio Maracaibo</h1>
+    <p>Convierte entre dólares, euros y bolívares con las tasas BCV y paralelo.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="calc-h">
+    <div class="label" id="calc-h">Monto</div>
+    <div class="row" style="margin-top:8px">
+      <input id="amount" type="number" inputmode="decimal" min="0" step="any" value="20" aria-label="Monto">
+      <select id="from" aria-label="Moneda de origen">
+        <option value="USD">USD $</option>
+        <option value="EUR">EUR €</option>
+        <option value="VES">Bs (VES)</option>
+      </select>
+    </div>
+    <div class="seg" id="presets" aria-label="Montos rápidos">
+      <button type="button" data-v="1">1</button>
+      <button type="button" data-v="5">5</button>
+      <button type="button" data-v="10">10</button>
+      <button type="button" data-v="20" aria-pressed="true">20</button>
+      <button type="button" data-v="50">50</button>
+      <button type="button" data-v="100">100</button>
+    </div>
+    <div class="results" id="results"></div>
+    <div class="tip" id="tip"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="rates-h">
+    <div class="row" style="justify-content:space-between;align-items:baseline">
+      <div class="label" id="rates-h">Tasas de referencia (Bs por unidad)</div>
+      <span id="status"></span>
+    </div>
+    <div class="tbl" style="margin-top:8px">
+      <table>
+        <thead><tr><th>Referencia</th><th class="r">Bs</th><th>Fecha</th></tr></thead>
+        <tbody id="rates"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="foot">Las tasas cambian a diario. Confírmalas en <a href="https://www.bcv.org.ve" target="_blank" rel="noopener">bcv.org.ve</a> o Monitor Dólar antes de cambiar dinero. El paralelo es la referencia de Binance P2P (USDT).</p>
+</div>
+
+<script>
+const KEYS=[
+  {k:"bcv_usd",name:"Dólar BCV (oficial)"},
+  {k:"bcv_eur",name:"Euro BCV (oficial)"},
+  {k:"binance",name:"Paralelo (Binance P2P)"},
+  {k:"zelle",name:"Zelle"},
+  {k:"paypal",name:"PayPal"}
+];
+let DATA={updatedAt:null,rates:{}}, rates=DATA.rates, offline=false;
+
+const $=id=>document.getElementById(id);
+const fmt=(n,d=2)=>Number.isFinite(n)?n.toLocaleString("es-VE",{minimumFractionDigits:d,maximumFractionDigits:d}):"—";
+const daysOld=d=>Math.floor((Date.now()-new Date(d+"T12:00:00"))/864e5);
+const fmtDate=d=>{try{return new Date(d+"T12:00:00").toLocaleDateString("es-VE",{day:"numeric",month:"short"})}catch{return d}};
+
+function calc(){
+  if(!rates.bcv_usd){$("results").innerHTML="";$("tip").textContent="Cargando tasas…";return}
+  const a=parseFloat($("amount").value)||0, from=$("from").value;
+  const U=rates.bcv_usd.value, E=rates.bcv_eur.value, P=rates.binance.value;
+  let out=[];
+  if(from==="USD"){
+    out=[["Bs a tasa BCV",fmt(a*U)+" Bs","Lo que cobra un comercio en bolívares"],
+         ["Bs a tasa paralela",fmt(a*P)+" Bs","Si vendes USDT o dólares en paralelo"],
+         ["En euros (cruce BCV)",fmt(a*U/E)+" €","USD × BCV ÷ euro BCV"]];
+  }else if(from==="EUR"){
+    out=[["Bs a tasa BCV",fmt(a*E)+" Bs","Euro oficial"],
+         ["En dólares (cruce BCV)",fmt(a*E/U)+" $","Euro BCV ÷ dólar BCV"],
+         ["Bs a paralelo",fmt(a*E/U*P)+" Bs","Pasando por dólares al paralelo"]];
+  }else{
+    out=[["En dólares a BCV",fmt(a/U)+" $","Precio en $ si pagas a tasa oficial"],
+         ["En dólares a paralelo",fmt(a/P)+" $","Lo que te cuesta si cambias al paralelo"],
+         ["En euros a BCV",fmt(a/E)+" €","Euro oficial"]];
+  }
+  $("results").innerHTML=out.map(([t,v,s])=>`<div class="res"><div class="label">${t}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("");
+  const gap=(P/U-1)*100;
+  $("tip").innerHTML = from==="VES"
+    ? `Un precio de <b class="num">${fmt(a)} Bs</b> te sale en <b class="num">${fmt(a/U)} $</b> si pagas en dólares a tasa BCV. Si tienes bolívares cambiados al paralelo, te sale en <b class="num">${fmt(a/P)} $</b>.`
+    : `Brecha paralelo vs. BCV: <b class="num">${fmt(gap,1)}%</b>. Si un comercio cobra en Bs a tasa BCV, pagar con bolívares comprados al paralelo te ahorra ese porcentaje. Pagar en efectivo en $ suele ser a la par.`;
+}
+
+function renderRates(){
+  $("rates").innerHTML=KEYS.map(({k,name})=>{
+    const r=rates[k]; if(!r) return "";
+    const old=daysOld(r.date);
+    return `<tr><td>${name}</td><td class="r num">${fmt(r.value)}</td><td>${fmtDate(r.date)}${old>3?`<span class="stale">${old} días</span>`:""}</td></tr>`;
+  }).join("");
+  if(!DATA.updatedAt){$("status").textContent="Cargando tasas…";return}
+  let u=DATA.updatedAt; try{u=new Date(u).toLocaleString("es-VE",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"})}catch{}
+  $("status").textContent=(offline?"Sin conexión · ":"")+"Revisado "+u;
+}
+
+function render(){renderRates();calc()}
+
+$("amount").addEventListener("input",()=>{document.querySelectorAll("#presets button").forEach(b=>b.setAttribute("aria-pressed","false"));calc()});
+$("from").addEventListener("change",calc);
+$("presets").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  document.querySelectorAll("#presets button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  $("amount").value=b.dataset.v; calc();
+});
+try{const s=localStorage.getItem("cm-from"); if(s) $("from").value=s;}catch{}
+$("from").addEventListener("change",()=>{try{localStorage.setItem("cm-from",$("from").value)}catch{}});
+
+async function load(){
+  try{
+    const r=await fetch("rates.json?t="+Date.now(),{cache:"no-store"});
+    if(!r.ok) throw 0; DATA=await r.json(); offline=false;
+  }catch{
+    try{const c=await caches.match("rates.json"); if(c){DATA=await c.json();offline=true}}catch{}
+    if(!DATA.updatedAt){$("status").textContent="Sin conexión y sin tasas guardadas. Abre la app con internet una vez.";}
+  }
+  rates=DATA.rates||{}; render();
+}
+render(); load();
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")load()});
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
